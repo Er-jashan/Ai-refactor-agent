@@ -86,6 +86,9 @@ Start Command:
 uvicorn api:app --host 0.0.0.0 --port $PORT
 
 //Project Preview :-
-https://ai-refactor.netlify.app/
+https://ai-refactor-agent.netlify.app/
+
+Note:- It will take upto 1 min to respond, because site may go to sleep.
+
 
 
