@@ -1,4 +1,4 @@
-AI Refactoring Agent
+#AI Refactoring Agent
 
 The AI Refactoring Agent is a full-stack web application designed to help developers quickly and securely refactor their code using Google's powerful Gemini 2.5 Flash model. Users provide existing code and a natural language request (e.g., "Make this secure and use f-strings in Python"), and the FastAPI backend sends the request to the AI, returning the clean, refactored code directly to the browser.
 
@@ -16,7 +16,7 @@ Modern Interface: Uses a single-page HTML application with the Monaco Editor (th
 
 Production Ready: Configured with CORS and a structure ready for cloud deployment (e.g., Render).
 
-🏛️ Architecture & Project Structure
+#🏛️ Architecture & Project Structure
 
 The application is split into a Python backend and a single static frontend file.
 
@@ -27,7 +27,7 @@ Ai-refactor-agent/
     └── index.html      # Single-page HTML frontend (UI, Monaco Editor, JS logic).
 
 
-🛠️ Local Setup (Development)
+#🛠️ Local Setup (Development)
 
 To run this application locally, you need Python (3.9+) and to set your Gemini API key.
 
@@ -65,7 +65,7 @@ The server will start at http://127.0.0.1:8000.
 Access the Frontend:
 Open the static/index.html file directly in your web browser. The JavaScript will automatically connect to the running FastAPI server for the API calls.
 
-🚀 Deployment Strategy (Production)
+#🚀 Deployment Strategy (Production)
 
 This project is structured for deployment as a single Web Service on platforms like Render or Google Cloud Run, where the FastAPI server handles both the API logic and the serving of the static HTML/JS frontend.
 
@@ -83,3 +83,4 @@ pip install -r requirements.txt
 Start Command:
 
 uvicorn api:app --host 0.0.0.0 --port $PORT
+
