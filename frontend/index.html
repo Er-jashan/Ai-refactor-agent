@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Refactoring Agent</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.45.0/min/vs/loader.min.js"></script>
+    <style>
+        /* Custom styles for the editor and layout */
+        body {
+            font-family: 'Inter', sans-serif;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        .editor-container {
+            border: 1px solid #e5e7eb;
+            border-radius: 0.5rem;
+            overflow: hidden;
+            height: 100%;
+            min-height: 300px; /* Minimum height for code editors */
+        }
+        #original-editor, #refactored-editor {
+            height: 100%;
+        }
+        .loading-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(255, 255, 255, 0.85);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10;
+            border-radius: 0.5rem;
+        }
+        /* Ensure the main grid takes up available space for equal editor heights */
+        .h-main-grid {
+            min-height: calc(100vh - 12rem);
+        }
+    </style>
+</head>
+<body class="bg-gray-50 p-4 sm:p-8">
+
+    <div class="max-w-7xl mx-auto w-full">
+        <header class="mb-8 text-center">
+            <h1 class="text-4xl font-extrabold text-indigo-700">AI Refactoring Agent</h1>
+            <p class="text-gray-600 mt-2">
+                Clone & Elevate: Enhance your code for performance and security using Gemini.
+            </p>
+        </header>
+
+        <main class="grid grid-cols-1 lg:grid-cols-3 gap-6 h-main-grid">
+
+            <div class="lg:col-span-1 flex flex-col">
+                <h2 class="text-lg font-semibold mb-2 text-gray-800">1. Original Code</h2>
+                <div id="original-editor-container" class="editor-container relative flex-grow">
+                    <div id="original-editor"></div>
+                </div>
+            </div>
+
+            <div class="lg:col-span-1 flex flex-col space-y-4">
+                <h2 class="text-lg font-semibold text-gray-800">2. Refactoring Request</h2>
+                <textarea 
+                    id="refactor-request" 
+                    rows="4" 
+                    class="w-full p-3 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 shadow-sm transition duration-150 ease-in-out" 
+                    placeholder="E.g., 'Refactor this Python code to use a dictionary lookup instead of a long if/elif chain for better performance.'"
+                >Refactor this code for better security practices and use Python f-strings for clarity.</textarea>
+                
+                <button 
+                    id="refactor-button" 
+                    class="w-full py-3 bg-indigo-600 text-white font-bold rounded-lg shadow-md hover:bg-indigo-700 transition duration-200 ease-in-out disabled:opacity-50"
+                >
+                    Run AI Refactor
+                </button>
+
+                <div id="status-message" class="p-3 bg-blue-100 text-blue-700 rounded-lg text-sm hidden"></div>
+            </div>
+
+            <div class="lg:col-span-1 flex flex-col">
+                <h2 class="text-lg font-semibold mb-2 text-gray-800">3. Refactored Code</h2>
+                <div id="refactored-editor-container" class="editor-container relative flex-grow">
+                    <div id="refactored-editor"></div>
+                    <div id="loading-overlay" class="loading-overlay hidden">
+                        <div class="flex flex-col items-center">
+                            <svg class="animate-spin h-8 w-8 text-indigo-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                            <p class="mt-3 text-indigo-700 font-medium">Agent is Refactoring...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </main>
+    </div>
+
+    <script>
+        let originalEditor, refactoredEditor;
+        
+        // --- 1. Monaco Editor Setup ---
+        require.config({ paths: { 'vs': 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.45.0/min/vs' }});
+        require(['vs/editor/editor.main'], function() {
+            
+            // Default code for the user to start with
+            const defaultCode = (
+`# IMPORTANT: Ensure the FastAPI server is running in your terminal.
+def calculate_score(user_data):
+    # This function calculates a user score based on age and status.
+    score = 0
+    age = user_data.get('age', 0)
+    status = user_data.get('status', 'guest')
+    
+    if age > 30:
+        score += 5
+    elif age > 20:
+        score += 3
+        
+    if status == 'admin':
+        score *= 2
+    elif status == 'premium':
+        score += 10
+    else:
+        score += 1
+        
+    return score`
+            );
+
+            // Initialize Original Code Editor
+            originalEditor = monaco.editor.create(document.getElementById('original-editor'), {
+                value: defaultCode,
+                language: 'python', // Default to Python, users can change code language
+                theme: 'vs-light',
+                automaticLayout: true,
+                roundedSelection: true,
+                scrollBeyondLastLine: false,
+                minimap: { enabled: false },
+                padding: { top: 10, bottom: 10 }
+            });
+
+            // Initialize Refactored Code Editor (Read-only)
+            refactoredEditor = monaco.editor.create(document.getElementById('refactored-editor'), {
+                value: '// Click "Run AI Refactor" to see the result here.',
+                language: 'python',
+                theme: 'vs-light',
+                readOnly: true,
+                automaticLayout: true,
+                roundedSelection: true,
+                scrollBeyondLastLine: false,
+                minimap: { enabled: false },
+                padding: { top: 10, bottom: 10 }
+            });
+        });
+
+        // --- 2. UI Element References ---
+        const refactorButton = document.getElementById('refactor-button');
+        const refactorRequest = document.getElementById('refactor-request');
+        const loadingOverlay = document.getElementById('loading-overlay');
+        const statusMessage = document.getElementById('status-message');
+
+        // --- 3. Utility Functions ---
+
+        /**
+         * Parses the Gemini markdown output to extract the code content and language.
+         * The LLM is instructed to return: ```language\n...code...\n```
+         * @param {string} fullText The full response text from the LLM.
+         * @returns {{code: string, language: string}} The extracted code and language.
+         */
+        function parseCodeOutput(fullText) {
+            const match = fullText.match(/```([a-zA-Z]+)?\n([\s\S]*?)\n```/);
+            if (match) {
+                // match[1] is the language (e.g., 'python'), match[2] is the code content
+                const language = match[1] ? match[1].toLowerCase() : 'plaintext';
+                return { code: match[2].trim(), language };
+            }
+
+            // Fallback for when the model doesn't use proper fences (or just returns text/mock)
+            // It tries to remove the fences, assuming the rest is code.
+            const code = fullText.replace(/```[a-zA-Z]*\n?/, '').replace(/```$/, '').trim();
+            const language = originalEditor ? originalEditor.getModel().getLanguageId() : 'plaintext';
+            return { code, language };
+        }
+
+
+        function showStatus(message, isError = false) {
+            statusMessage.textContent = message;
+            statusMessage.className = `p-3 text-sm rounded-lg ${isError ? 'bg-red-100 text-red-700 font-medium' : 'bg-blue-100 text-blue-700'}`;
+            statusMessage.classList.remove('hidden');
+        }
+
+        function toggleLoading(isLoading) {
+            loadingOverlay.classList.toggle('hidden', !isLoading);
+            refactorButton.disabled = isLoading;
+            refactorButton.textContent = isLoading ? 'Running...' : 'Run AI Refactor';
+        }
+
+        // --- 4. API Call Handler (UPDATED) ---
+
+        refactorButton.addEventListener('click', async () => {
+            if (!originalEditor) {
+                showStatus('Error: Monaco Editor not initialized.', true);
+                return;
+            }
+
+            const userCode = originalEditor.getValue();
+            const requestText = refactorRequest.value.trim();
+            const originalLanguage = originalEditor.getModel().getLanguageId(); // Get current language for fallback
+
+            if (!userCode || !requestText) {
+                showStatus('Please provide both the code and a refactoring request.', true);
+                return;
+            }
+
+            // Start loading state
+            toggleLoading(true);
+            statusMessage.classList.add('hidden');
+            refactoredEditor.setValue('// Waiting for response...');
+
+            try {
+                // Prepare form data for the FastAPI backend
+                const formData = new FormData();
+                formData.append('user_code', userCode);
+                formData.append('refactor_request', requestText);
+
+                const apiUrl = 'http://127.0.0.1:8000/refactor';
+
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    body: formData,
+                });
+
+                const contentType = response.headers.get('content-type');
+                if (!contentType || !contentType.includes('application/json')) {
+                     // Handle non-JSON errors (e.g., 500 server error page returned)
+                     const errorText = await response.text();
+                     throw new Error(`Server returned non-JSON response (Status ${response.status}): ${errorText.substring(0, 100)}...`);
+                }
+
+                const result = await response.json();
+
+                // Check for the expected successful structure: response status OK, result.success=true, and refactored_code key exists
+                if (response.ok && result.success && result.refactored_code) {
+                    // Parse the output to get clean code and language
+                    const { code, language } = parseCodeOutput(result.refactored_code);
+
+                    refactoredEditor.setValue(code);
+                    // Use the language detected by the parser, or fall back to the original
+                    monaco.editor.setModelLanguage(refactoredEditor.getModel(), language || originalLanguage);
+                    showStatus('Refactoring successful!', false);
+                } else if (result.detail) {
+                    // Handle FastAPI HTTPException errors
+                    refactoredEditor.setValue(`// AI Service Error:\n${result.detail}`);
+                    showStatus(`Refactoring failed: ${result.detail}`, true);
+                } else {
+                    // CRITICAL DEBUGGING: If the expected structure is missing, display the raw response
+                    const rawResult = JSON.stringify(result, null, 2);
+                    refactoredEditor.setValue(`// Refactoring failed or key 'refactored_code' missing from response.\n// Raw API Response (Check Keys/Success Flag):\n${rawResult}`);
+                    showStatus('Refactoring failed. Check the Refactored Code editor for the raw API response.', true);
+                }
+
+            } catch (error) {
+                console.error('Fetch Error:', error);
+                const errorMessage = error.message.includes('Failed to fetch') 
+                    ? 'Connection failed. Ensure the FastAPI backend is running at http://127.0.0.1:8000.'
+                    : `Fatal Error: ${error.message}`;
+
+                refactoredEditor.setValue(`// FATAL ERROR:\n${errorMessage}`);
+                showStatus(errorMessage, true);
+            } finally {
+                // Stop loading state
+                toggleLoading(false);
+            }
+        });
+
+    </script>
+</body>
+</html>

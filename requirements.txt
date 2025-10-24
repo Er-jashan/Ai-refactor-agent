@@ -1,0 +1,10 @@
+# AI Refactoring Agent API Dependencies;
+
+Web Server;
+
+fastapi;
+uvicorn;
+
+AI SDK;
+
+google-genai;
