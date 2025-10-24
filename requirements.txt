@@ -9,8 +9,4 @@ uvicorn;
 
 google-genai;
 
-#activate cloudcosmos
-conda activate cloudcosmos;
 
-# set env
-$env:GEMINI_API_KEY = "";
