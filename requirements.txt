@@ -8,3 +8,6 @@ uvicorn;
 #AI SDK;
 
 google-genai;
+
+#activate cloudcosmos
+conda activate cloudcosmos
