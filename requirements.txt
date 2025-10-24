@@ -9,5 +9,5 @@ uvicorn;
 
 google-genai;
 
-pip install python-multipart;
+python-multipart;
 
